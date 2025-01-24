@@ -50,6 +50,7 @@ button {
   background-color: aliceblue;
   color: mediumblue;
   cursor: pointer;
+  transition: all 310ms ease-in-out;
 }
 
 button:focus,

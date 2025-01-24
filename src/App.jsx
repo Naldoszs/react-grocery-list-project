@@ -1,5 +1,5 @@
 import "./styles/App.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./Header";
 import AddItem from "./AddItem";
 import SearchItem from "./SearchItem";
@@ -7,8 +7,11 @@ import Content from "./Content";
 import Footer from "./Footer";
 
 const App = () => {
+  const API_URL = "http://localhost:3500/items";
+
   const [items, setItems] = useState(
-    JSON.parse(localStorage.getItem("shoppinglist"))
+    // JSON.parse(localStorage.getItem("shoppinglist")) ||
+    []
   );
 
   // use state for d controlled input of the add item box
@@ -16,14 +19,39 @@ const App = () => {
 
   //use state for controlled input of the searh box
   const [search, setSearch] = useState("");
+  //error in fetch data
+  const [fetchError, setFetchError] = useState(null);
 
-  // ftn to set and save items
-  const setandSaveItem = (newItems) => {
-    //set the items
-    setItems(newItems);
-    //save in local S
-    localStorage.setItem("shoppinglist", JSON.stringify(newItems));
-  };
+  //load state
+  const [isLoading, setIsLoading] = useState(true);
+
+  //use effect
+  useEffect(() => {
+    // localStorage.setItem("shoppinglist", JSON.stringify(items));
+
+    const fetchItems = async () => {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) {
+          throw new Error("Error in fetching data!!");
+        } else {
+          const listItems = await res.json();
+          setItems(listItems);
+          setFetchError(null);
+        }
+      } catch (err) {
+        setFetchError(err.message);
+      } finally {
+        //set load state to false
+        setIsLoading(false);
+      }
+    };
+    //simulating the REST API is not as fast as the JSON-server npm
+    setTimeout(() => {
+      //call the fetchItem ftn
+      (async () => await fetchItems())();
+    }, 2000);
+  }, []);
 
   //ftn to handle check
   const handleCheck = (id) => {
@@ -37,7 +65,7 @@ const App = () => {
         : item
     );
 
-    setandSaveItem(listItems);
+    setItems(listItems);
   };
 
   //futn to handle delete
@@ -45,7 +73,7 @@ const App = () => {
     //filtering out clicked id
     const listItems = items.filter((item) => item.id !== id);
 
-    setandSaveItem(listItems);
+    setItems(listItems);
   };
 
   //ftn to add item
@@ -62,7 +90,7 @@ const App = () => {
     //but the obj in the array
     const listItems = [...items, myNewItem];
 
-    setandSaveItem(listItems);
+    setItems(listItems);
   };
   //ftn to handle submit of the controlled input
   const handleSubmit = (e) => {
@@ -83,20 +111,46 @@ const App = () => {
   return (
     <div className="App">
       <Header title="Grocery List" />
+
       <AddItem
         newItem={newItem}
         setNewItem={setNewItem}
         handleSubmit={handleSubmit}
       />
+
       <SearchItem search={search} setSearch={setSearch} />
-      <Content
-        items={items.filter((item) =>
-          item.item.toLowerCase().includes(search.toLowerCase())
+
+      <main>
+        {isLoading && (
+          <p
+            style={{
+              margin: "auto 0",
+              color: "green",
+            }}
+          >
+            Loading the items...
+          </p>
         )}
-        setItems={setItems}
-        handleCheck={handleCheck}
-        handleDelete={handleDelete}
-      />
+        {fetchError && (
+          <p
+            style={{
+              color: "red",
+              marginTop: "0.5rem",
+            }}
+          >{`Error: ${fetchError}`}</p>
+        )}
+        {!fetchError && !isLoading && (
+          <Content
+            items={items.filter((item) =>
+              item.item.toLowerCase().includes(search.toLowerCase())
+            )}
+            setItems={setItems}
+            handleCheck={handleCheck}
+            handleDelete={handleDelete}
+          />
+        )}
+      </main>
+
       <Footer length={items.length} />
     </div>
   );
